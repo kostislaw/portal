@@ -830,6 +830,24 @@ async function init() {
   initMonthMetaToToday();
   bindLoginPasswordAuth();
 
+  // DEV: skip auth — remove this block to restore normal login flow
+  {
+    state.auth.user = { login: "test", name: "Тест" };
+    state.auth.memberId = 0;
+    state.auth.roles = [];
+    syncLoginBodyState();
+    bindTopBarButtons();
+    bindHistoryControls();
+    createShiftPopover();
+    createEmployeeFilterPopover();
+    createMonthPickerPopover();
+    renderChangeLog();
+    showMainScreen();
+    loadInitialData().catch((err) => console.error("DEV loadInitialData error:", err));
+    return;
+  }
+  // END DEV
+
   // Автовосстановление сессии (без повторного ввода пароля)
   const rawAuth = readRawAuthCache();
   if (rawAuth && !AUTH_VALID_METHODS.has(rawAuth.authMethod)) {
