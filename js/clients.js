@@ -45,7 +45,7 @@ const CLIENTS_NEW_URL =
   getConfigValue("clients.newUrl", { defaultValue: "" }) ||
   "https://funouriskasok.beget.app/webhook/new";
 const CLIENTS_CACHE_KEY = "clients_cache_v1";
-const CLIENTS_CACHE_TTL_MS = 5 * 60 * 1000;
+const CLIENTS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const CLIENTS_ORDER_KEY = "clients_order_v1";
 const CLIENTS_GROUP_KEY = "clients_group_collapsed_v1";
 
@@ -2726,5 +2726,4 @@ if (!canAccessClients && clientsStateEl && clientsTableWrapEl) {
   clientsSaveEl?.classList.add("hidden");
 }
 setActiveSection("clients");
-clientsRefreshEl?.addEventListener("click", () => loadClients({ force: true }));
 clientsSaveEl?.addEventListener("click", saveClientsToWebhook);
