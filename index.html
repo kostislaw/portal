@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>GAPё Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("sm1_theme_preference");
+        var resolved = theme === "light" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", resolved);
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+  <style>
+    html { background: #141418; color-scheme: dark; }
+    html[data-theme="light"] { background: #ececf0; color-scheme: light; }
+  </style>
+  <link rel="stylesheet" href="css/styles.css?v=80" />
+</head>
+
+<body class="booting">
+  <div id="app">
+    <!-- Экран логина -->
+    <div id="login-screen" class="card">
+      <div class="login-brand-logo-only">
+        <img class="login-logo" src="assets/logo/logo.png" alt="Логотип компании" />
+      </div>
+
+      <div class="login-form" id="login-form">
+        <div class="field">
+          <label class="field-label" for="login-input">Логин</label>
+          <input id="login-input" type="text" autocomplete="username" placeholder="Ваш логин" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="password-input">Пароль</label>
+          <div class="password-wrap">
+            <input id="password-input" type="password" autocomplete="current-password" placeholder="Пароль" />
+            <button type="button" class="btn-eye" id="password-toggle" aria-label="Показать пароль" tabindex="-1">
+              <svg id="eye-show" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="eye-hide" class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="button" class="btn primary full-width" id="login-submit-button">
+          Войти
+        </button>
+        <div id="login-error" class="error"></div>
+      </div>
+    </div>
+
+    <!-- Основной экран -->
+    <div id="main-screen" class="hidden">
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <h2 id="main-title">Клиенты</h2>
+          <div id="current-user-label" class="muted"></div>
+        </div>
+
+        <div class="top-bar-right">
+          <div class="schedule-actions schedule-only">
+            <button type="button" class="btn toggle mobile-only" id="btn-mobile-toolbar">Панель смены</button>
+            <button type="button" class="btn toggle mobile-only" id="btn-line-tabs">Отделы</button>
+            <button type="button" class="btn toggle" id="btn-legend-toggle" aria-controls="shift-legend"
+              aria-expanded="false">Легенда</button>
+          </div>
+          <div id="line-tabs" class="line-tabs schedule-only"></div>
+
+          <div class="month-switcher schedule-only">
+            <button type="button" class="btn toggle" id="btn-prev-month" style="padding: 4px 10px;">&#8249;</button>
+            <button type="button" id="current-month-label" class="month-label-button" aria-label="Выбрать месяц">Месяц</button>
+            <button type="button" class="btn toggle" id="btn-next-month" style="padding: 4px 10px;">&#8250;</button>
+          </div>
+
+          <div class="top-bar-divider"></div>
+
+          <button type="button" class="btn toggle clients-only hidden" id="clients-refresh">Обновить</button>
+          <button type="button" class="btn primary clients-only hidden" id="clients-save">Сохранить</button>
+          <button type="button" class="btn toggle" id="btn-theme-toggle" title="Переключить тему">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Тема
+          </button>
+          <button type="button" class="btn toggle" id="btn-logout" title="Выйти из аккаунта">Выйти</button>
+        </div>
+      </div>
+
+      <div id="schedule-view">
+        <div class="schedule-container">
+          <div class="schedule-toolbar">
+            <div class="toolbar-group">
+              <label for="quick-template-select">Шаблон смены</label>
+              <select id="quick-template-select"></select>
+            </div>
+
+            <div class="toolbar-group">
+              <label>Время</label>
+              <div class="toolbar-inline">
+                <input id="quick-time-from" type="time" />
+                <span class="toolbar-separator">—</span>
+                <input id="quick-time-to" type="time" />
+              </div>
+            </div>
+
+            <div class="toolbar-group">
+              <label for="quick-amount">Сумма</label>
+              <input id="quick-amount" type="number" min="0" step="100" />
+            </div>
+
+            <div class="toolbar-actions">
+              <button type="button" class="btn toggle mobile-only" id="btn-mobile-toolbar-close">⬇️ Скрыть</button>
+              <button type="button" class="btn toggle" id="quick-mode-toggle">
+                Быстрое назначение
+              </button>
+              <button type="button" class="btn primary ghost" id="btn-save-pyrus">
+                Сохранить в Pyrus
+              </button>
+            </div>
+          </div>
+
+          <div class="schedule-scroll">
+            <div id="schedule-root"></div>
+          </div>
+
+          <!-- Легенда цветов смен (динамически генерируется) -->
+          <div class="shift-legend-backdrop" id="shift-legend-backdrop" aria-hidden="true"></div>
+          <div class="shift-legend shift-legend-hidden" id="shift-legend">
+            <div class="shift-legend-title">Легенда цветов смен</div>
+            <div class="shift-legend-groups" id="shift-legend-content">
+              <!-- Будет заполнено динамически из JavaScript -->
+            </div>
+          </div>
+
+          <div style="padding: 8px 12px; font-size: 12px; color: var(--text-muted);">
+            Режим: редактирование доступно только при правах <b>edit</b> (сейчас
+            реализован локальный кэш, без отправки в Pyrus).
+          </div>
+
+          <div class="change-log-panel">
+            <div class="change-log-header">
+              <div>
+                <div class="change-log-title">История изменений</div>
+                <div class="change-log-subtitle">
+                  Сохраняется локально в браузере, фиксируя добавление, правки и удаление.
+                </div>
+              </div>
+              <button type="button" class="btn toggle" id="btn-clear-history">
+                Очистить историю
+              </button>
+            </div>
+            <div id="change-log-list" class="change-log-list">
+              Пока нет локальных изменений
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="clients-view" class="clients-view hidden">
+        <div class="clients-sheet">
+          <div class="clients-table-wrap" id="clients-table-wrap">
+            <div class="clients-state" id="clients-state">Загрузка...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="clients-edit-backdrop" class="clients-edit-backdrop hidden" aria-hidden="true">
+    <div class="clients-edit-panel" role="dialog" aria-modal="true" aria-labelledby="clients-edit-title">
+      <div class="clients-edit-header">
+        <div class="clients-edit-title" id="clients-edit-title">Данные клиента</div>
+        <button type="button" class="clients-edit-close" id="clients-edit-close">x</button>
+      </div>
+      <div class="clients-edit-body" id="clients-edit-body"></div>
+      <div class="clients-edit-footer">
+        <div class="clients-edit-status" id="clients-edit-status"></div>
+        <button type="button" class="btn toggle" id="clients-edit-cancel">Отмена</button>
+        <button type="button" class="btn primary" id="clients-edit-save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+    <script src="js/shift-colors.js"></script>
+  <script type="module" src="js/app.js?v=10"></script>
+  <script type="module" src="js/clients.js?v=76"></script>
+</body>
+
+</html>
