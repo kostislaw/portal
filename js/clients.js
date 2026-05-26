@@ -92,6 +92,9 @@ let clientsDirtyKeys = new Set();
 let clientsSaveDefaultLabel = "";
 let clientsToastTimer = null;
 let activeSection = "clients";
+let autoSaveTimer = null;
+let clientsPollTimer = null;
+let clientsSaving = false;
 
 function getCookie(name) {
   if (!name) return null;
@@ -321,20 +324,41 @@ function markClientDirty(row) {
   if (!key) return;
   clientsDirtyKeys.add(key);
   updateClientsSaveButton();
+  scheduleAutoSave();
+}
+
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    autoSaveTimer = null;
+    saveClientsToWebhook();
+  }, 3000);
+}
+
+function startClientsPolling() {
+  if (clientsPollTimer) return;
+  clientsPollTimer = setInterval(async () => {
+    if (clientsDirtyKeys.size === 0 && !autoSaveTimer && !clientsSaving) {
+      await loadClients({ force: true });
+    }
+  }, 60000);
+}
+
+function stopClientsPolling() {
+  clearInterval(clientsPollTimer);
+  clientsPollTimer = null;
 }
 
 function updateClientsSaveButton() {
   if (!clientsSaveEl) return;
   const count = clientsDirtyKeys.size;
   if (!clientsSaveDefaultLabel) {
-    clientsSaveDefaultLabel = clientsSaveEl.textContent.trim();
+    clientsSaveDefaultLabel = clientsSaveEl.textContent?.trim() || "";
   }
   if (!count) {
-    clientsSaveEl.disabled = true;
-    clientsSaveEl.textContent = "Нет изменений (0)";
+    clientsSaveEl.textContent = "";
   } else {
-    clientsSaveEl.disabled = false;
-    clientsSaveEl.textContent = `Сохранить (${count})`;
+    clientsSaveEl.textContent = `Несохранено: ${count}`;
   }
 }
 
@@ -2460,7 +2484,7 @@ async function loadPayTo2AndMerge(raw) {
 }
 
 async function saveClientsToWebhook() {
-  if (!clientsSaveEl) return;
+  if (clientsSaving) return;
   const hasClientsSaveUrl = false;
   const hasPayToUrl = !!CLIENTS_PAYTO_URL;
   const hasSumToUrl = !!CLIENTS_SUMTO_URL;
@@ -2505,9 +2529,8 @@ async function saveClientsToWebhook() {
     return;
   }
 
-  const originalLabel = clientsSaveEl.textContent;
-  clientsSaveEl.disabled = true;
-  clientsSaveEl.textContent = "💾 Сохранение...";
+  clientsSaving = true;
+  if (clientsSaveEl) clientsSaveEl.textContent = "💾 Сохранение...";
   let hasError = false;
   let clientsSentOk = false;
   try {
@@ -2642,19 +2665,18 @@ async function saveClientsToWebhook() {
     }
     if (!hasError) {
       clientsDirtyKeys.clear();
-      updateClientsSaveButton();
+      if (clientsSaveEl) clientsSaveEl.textContent = "✓";
+      setTimeout(() => updateClientsSaveButton(), 2000);
     } else {
-      clientsSaveEl.textContent = "Ошибка отправки";
-      setTimeout(() => {
-        updateClientsSaveButton();
-      }, 1500);
+      if (clientsSaveEl) clientsSaveEl.textContent = "⚠ Ошибка";
+      setTimeout(() => updateClientsSaveButton(), 2000);
     }
   } catch (error) {
     console.error("Clients save failed:", error);
   } finally {
-    clientsSaveEl.disabled = false;
-    if (clientsSaveEl.textContent === "💾 Сохранение...") {
-      clientsSaveEl.textContent = originalLabel;
+    clientsSaving = false;
+    if (clientsSaveEl && clientsSaveEl.textContent === "💾 Сохранение...") {
+      updateClientsSaveButton();
     }
   }
 }
@@ -2694,6 +2716,7 @@ function setActiveSection(section) {
   }
   if (hasClientsAccess()) {
     loadClients({ force: false });
+    startClientsPolling();
   }
 }
 
@@ -2726,4 +2749,3 @@ if (!canAccessClients && clientsStateEl && clientsTableWrapEl) {
   clientsSaveEl?.classList.add("hidden");
 }
 setActiveSection("clients");
-clientsSaveEl?.addEventListener("click", saveClientsToWebhook);
