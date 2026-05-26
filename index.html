@@ -20,7 +20,7 @@
     html { background: #141418; color-scheme: dark; }
     html[data-theme="light"] { background: #ececf0; color-scheme: light; }
   </style>
-  <link rel="stylesheet" href="css/styles.css?v=78" />
+  <link rel="stylesheet" href="css/styles.css?v=80" />
 </head>
 
 <body class="booting">
@@ -30,51 +30,26 @@
       <div class="login-brand-logo-only">
         <img class="login-logo" src="assets/logo/logo.png" alt="Логотип компании" />
       </div>
-      <p class="muted">Вход по email с подтверждением кода.</p>
 
-      <div class="auth-panels">
-        <section class="auth-panel" data-auth-panel="email" role="tabpanel">
-          <p class="muted auth-panel-hint">Отправим код на ваш email для подтверждения.</p>
-
-          <div class="email-auth-step" id="email-step-request">
-            <div class="field">
-              <span>Email</span>
-              <input id="email-input" type="email" autocomplete="email" placeholder="name@company.ru" spellcheck="false" />
-            </div>
-            <button type="button" class="btn primary full-width" id="email-send-button">
-              Получить код
+      <div class="login-form" id="login-form">
+        <div class="field">
+          <label class="field-label" for="login-input">Логин</label>
+          <input id="login-input" type="text" autocomplete="username" placeholder="Ваш логин" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="password-input">Пароль</label>
+          <div class="password-wrap">
+            <input id="password-input" type="password" autocomplete="current-password" placeholder="Пароль" />
+            <button type="button" class="btn-eye" id="password-toggle" aria-label="Показать пароль" tabindex="-1">
+              <svg id="eye-show" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="eye-hide" class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
             </button>
-            <div id="email-request-error" class="error"></div>
           </div>
-
-          <div class="email-auth-step hidden" id="email-step-code">
-            <div class="email-auth-meta">
-              <span class="email-auth-label">Код отправлен на</span>
-              <span id="email-target-label" class="email-auth-target">—</span>
-              <button type="button" class="btn ghost email-change-button" id="email-change-button">
-                Изменить email
-              </button>
-            </div>
-            <div class="otp-group" id="otp-group" aria-label="Введите код подтверждения">
-              <input class="otp-input" inputmode="numeric" maxlength="1" aria-label="Цифра 1" />
-              <input class="otp-input" inputmode="numeric" maxlength="1" aria-label="Цифра 2" />
-              <input class="otp-input" inputmode="numeric" maxlength="1" aria-label="Цифра 3" />
-              <input class="otp-input" inputmode="numeric" maxlength="1" aria-label="Цифра 4" />
-              <input class="otp-input" inputmode="numeric" maxlength="1" aria-label="Цифра 5" />
-              <input class="otp-input" inputmode="numeric" maxlength="1" aria-label="Цифра 6" />
-            </div>
-            <div class="email-auth-actions">
-              <button type="button" class="btn primary full-width" id="email-verify-button">
-                Подтвердить
-              </button>
-              <button type="button" class="btn ghost full-width" id="email-resend-button">
-                Повторная отправка
-              </button>
-            </div>
-            <div id="email-code-error" class="error"></div>
-          </div>
-        </section>
-
+        </div>
+        <button type="button" class="btn primary full-width" id="login-submit-button">
+          Войти
+        </button>
+        <div id="login-error" class="error"></div>
       </div>
     </div>
 
@@ -87,39 +62,28 @@
         </div>
 
         <div class="top-bar-right">
-          <button type="button" class="btn toggle" id="btn-theme-toggle">
-            🌙 Тема
-          </button>
-          <button type="button" class="btn toggle" id="btn-logout" title="Сбросить авторизацию">
-            🚪 Выйти
-          </button>
-          <button type="button" class="btn toggle clients-only hidden" id="clients-refresh">
-            &#8635; Обновить
-          </button>
-          <button type="button" class="btn primary ghost clients-only hidden" id="clients-save">
-            💾 Сохранить
-          </button>
           <div class="schedule-actions schedule-only">
-            <button type="button" class="btn toggle mobile-only" id="btn-mobile-toolbar">⚙️ Панель смены</button>
-            <button type="button" class="btn toggle mobile-only" id="btn-line-tabs">🏢 Отделы</button>
+            <button type="button" class="btn toggle mobile-only" id="btn-mobile-toolbar">Панель смены</button>
+            <button type="button" class="btn toggle mobile-only" id="btn-line-tabs">Отделы</button>
             <button type="button" class="btn toggle" id="btn-legend-toggle" aria-controls="shift-legend"
-              aria-expanded="false">
-              🎨 Легенда
-            </button>
+              aria-expanded="false">Легенда</button>
           </div>
           <div id="line-tabs" class="line-tabs schedule-only"></div>
 
           <div class="month-switcher schedule-only">
-            <button type="button" class="btn toggle" id="btn-prev-month">
-              &#8249;
-            </button>
-            <button type="button" id="current-month-label" class="month-label-button" aria-label="Выбрать месяц">
-              Месяц
-            </button>
-            <button type="button" class="btn toggle" id="btn-next-month">
-              &#8250;
-            </button>
+            <button type="button" class="btn toggle" id="btn-prev-month" style="padding: 4px 10px;">&#8249;</button>
+            <button type="button" id="current-month-label" class="month-label-button" aria-label="Выбрать месяц">Месяц</button>
+            <button type="button" class="btn toggle" id="btn-next-month" style="padding: 4px 10px;">&#8250;</button>
           </div>
+
+          <div class="top-bar-divider"></div>
+
+          <button type="button" class="btn toggle clients-only hidden" id="clients-refresh">Обновить</button>
+          <button type="button" class="btn primary clients-only hidden" id="clients-save">Сохранить</button>
+          <button type="button" class="btn toggle" id="btn-theme-toggle" title="Переключить тему">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Тема
+          </button>
+          <button type="button" class="btn toggle" id="btn-logout" title="Выйти из аккаунта">Выйти</button>
         </div>
       </div>
 

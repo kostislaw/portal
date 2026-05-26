@@ -354,6 +354,8 @@ const AUTH_COOKIE_DAYS = config.storage.auth.cookieDays;
 const AUTH_EMAIL_CHECK_KEY = "sm_auth_email_last_check";
 
 const AUTH_METHOD_EMAIL = "email";
+const AUTH_METHOD_PASSWORD = "loginPassword";
+const AUTH_VALID_METHODS = new Set([AUTH_METHOD_EMAIL, AUTH_METHOD_PASSWORD]);
 
 
 function setCookie(name, value, days) {
@@ -402,11 +404,11 @@ function clearAllCacheAndCookies() {
   clearAllCookies();
 }
 
-function saveAuthCache(login) {
+function saveAuthCache(login, method) {
   // пароль не сохраняем
   const payload = {
     savedAt: Date.now(),
-    authMethod: AUTH_METHOD_EMAIL,
+    authMethod: method || AUTH_METHOD_PASSWORD,
     login: login || "",
     user: state.auth.user || null,
     roles: state.auth.roles || null,
@@ -691,18 +693,25 @@ const loginScreenEl = $("#login-screen");
 const mainScreenEl = $("#main-screen");
 const topBarEl = document.querySelector(".top-bar");
 
-const emailInputEl = $("#email-input");
-const emailSendButtonEl = $("#email-send-button");
-const emailStepRequestEl = $("#email-step-request");
-const emailStepCodeEl = $("#email-step-code");
-const emailTargetLabelEl = $("#email-target-label");
-const emailChangeButtonEl = $("#email-change-button");
-const otpGroupEl = $("#otp-group");
-const otpInputs = otpGroupEl ? Array.from(otpGroupEl.querySelectorAll(".otp-input")) : [];
-const emailVerifyButtonEl = $("#email-verify-button");
-const emailResendButtonEl = $("#email-resend-button");
-const emailRequestErrorEl = $("#email-request-error");
-const emailCodeErrorEl = $("#email-code-error");
+const loginInputEl = $("#login-input");
+const passwordInputEl = $("#password-input");
+const loginSubmitButtonEl = $("#login-submit-button");
+const loginErrorEl = $("#login-error");
+const passwordToggleEl = $("#password-toggle");
+
+// legacy email refs (unused, kept for compatibility)
+const emailInputEl = null;
+const emailSendButtonEl = null;
+const emailStepRequestEl = null;
+const emailStepCodeEl = null;
+const emailTargetLabelEl = null;
+const emailChangeButtonEl = null;
+const otpGroupEl = null;
+const otpInputs = [];
+const emailVerifyButtonEl = null;
+const emailResendButtonEl = null;
+const emailRequestErrorEl = null;
+const emailCodeErrorEl = null;
 const currentUserLabelEl = $("#current-user-label");
 const currentMonthLabelEl = $("#current-month-label");
 
@@ -819,12 +828,11 @@ async function init() {
   loadCurrentLinePreference();
   loadEmployeeFilters();
   initMonthMetaToToday();
-  bindEmailAuth();
-  loadEmailAuthMembers();
+  bindLoginPasswordAuth();
 
   // Автовосстановление сессии (без повторного ввода пароля)
   const rawAuth = readRawAuthCache();
-  if (rawAuth && rawAuth.authMethod !== AUTH_METHOD_EMAIL) {
+  if (rawAuth && !AUTH_VALID_METHODS.has(rawAuth.authMethod)) {
     clearAllCacheAndCookies();
     clearAuthCache();
     state.auth.user = null;
@@ -834,32 +842,10 @@ async function init() {
     showLoginScreen();
   } else {
     const cachedAuth = loadAuthCache();
-    if (cachedAuth && applyAuthCache(cachedAuth)) {
+    if (cachedAuth && AUTH_VALID_METHODS.has(cachedAuth.authMethod) && applyAuthCache(cachedAuth)) {
       showMainScreen();
-      if (shouldCheckEmailToday()) {
-        const userEmail = normalizeEmail(state.auth.user?.login);
-        if (userEmail) {
-          try {
-            const data = await membersService.getMembers();
-            const members = membersService.extractMembersFromPyrusData(data);
-            const isKnownEmail = members.some(
-              (member) => normalizeEmail(member?.email) === userEmail
-            );
-            if (!isKnownEmail) {
-              clearAuthCache();
-              state.auth.user = null;
-              state.auth.roles = null;
-              state.auth.memberId = null;
-              state.auth.permissions = buildDefaultPermissions();
-              showLoginScreen();
-            } else {
-              markEmailCheckedToday();
-            }
-          } catch (err) {
-            console.error("Email check failed:", err);
-          }
-        }
-      }
+    } else {
+      showLoginScreen();
     }
   }
 
@@ -877,8 +863,8 @@ async function init() {
       console.error("Auto-login loadInitialData error:", err);
       clearAuthCache();
       showLoginScreen();
-      if (emailRequestErrorEl) {
-        emailRequestErrorEl.textContent = "Сессия истекла — войдите снова";
+      if (loginErrorEl) {
+        loginErrorEl.textContent = "Сессия истекла — войдите снова";
       }
     });
   }
@@ -1409,6 +1395,93 @@ if (state.auth.roles) {
       return;
     }
     startResendTimer();
+  });
+}
+
+async function performLoginPasswordAuth(login, password) {
+  const data = await graphClient.callGraphApi("auth", {
+    subtype: "loginPassword",
+    login,
+    password,
+  });
+  if (!data || (!data.user && !data.memberId)) {
+    throw new Error(data?.message || "Неверный логин или пароль.");
+  }
+  return data;
+}
+
+function bindLoginPasswordAuth() {
+  if (!loginSubmitButtonEl) return;
+
+  // Показать/скрыть пароль
+  if (passwordToggleEl && passwordInputEl) {
+    passwordToggleEl.addEventListener("click", () => {
+      const isHidden = passwordInputEl.type === "password";
+      passwordInputEl.type = isHidden ? "text" : "password";
+      const eyeShow = document.getElementById("eye-show");
+      const eyeHide = document.getElementById("eye-hide");
+      if (eyeShow) eyeShow.classList.toggle("hidden", isHidden);
+      if (eyeHide) eyeHide.classList.toggle("hidden", !isHidden);
+    });
+  }
+
+  async function doLogin() {
+    if (loginErrorEl) loginErrorEl.textContent = "";
+    const login = loginInputEl ? loginInputEl.value.trim() : "";
+    const password = passwordInputEl ? passwordInputEl.value : "";
+
+    if (!login) {
+      if (loginErrorEl) loginErrorEl.textContent = "Введите логин";
+      loginInputEl?.focus();
+      return;
+    }
+    if (!password) {
+      if (loginErrorEl) loginErrorEl.textContent = "Введите пароль";
+      passwordInputEl?.focus();
+      return;
+    }
+
+    loginSubmitButtonEl.disabled = true;
+    loginSubmitButtonEl.textContent = "Вход...";
+    loginSubmitButtonEl.classList.add("loading");
+
+    try {
+      const data = await performLoginPasswordAuth(login, password);
+
+      state.auth.user = data.user || { login, name: login };
+      state.auth.roles = data.roles || null;
+      state.auth.memberId = data.memberId || null;
+
+      if (state.auth.roles) {
+        state.auth.permissions = resolvePermissionsFromRoles(state.auth.roles, ROLE_MATRIX_BY_LINE);
+      } else {
+        state.auth.permissions = normalizePermissions(data.permissions || null);
+      }
+
+      updateCurrentUserLabel(login);
+      saveAuthCache(login, AUTH_METHOD_PASSWORD);
+      showMainScreen();
+      renderLineTabs();
+      updateLineToggleUI();
+      persistCurrentLinePreference();
+      loadInitialData();
+    } catch (err) {
+      if (loginErrorEl) {
+        loginErrorEl.textContent = err?.message || "Ошибка входа. Попробуйте ещё раз.";
+      }
+    } finally {
+      loginSubmitButtonEl.disabled = false;
+      loginSubmitButtonEl.textContent = "Войти";
+      loginSubmitButtonEl.classList.remove("loading");
+    }
+  }
+
+  loginSubmitButtonEl.addEventListener("click", doLogin);
+
+  [loginInputEl, passwordInputEl].forEach((el) => {
+    el?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doLogin();
+    });
   });
 }
 
